@@ -1,0 +1,7 @@
+{
+    "embedding_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "index_type": "IndexFlatIP",
+    "index_dimension": 384,
+    "number_of_vectors": 4790,
+    "number_of_documents": 4790
+}

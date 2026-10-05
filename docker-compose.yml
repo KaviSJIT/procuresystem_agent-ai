@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - QWEN_BASE_MODEL=${QWEN_BASE_MODEL:-}
+      - DATABASE_URL=sqlite:///./procurement.db
+      - FRONTEND_URL=http://localhost:5173
+    volumes:
+      - ./models:/app/models
+      - ./procurement_audit_log.json:/app/procurement_audit_log.json
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: always
