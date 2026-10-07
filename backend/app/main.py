@@ -6,8 +6,8 @@ from app.core.config import settings
 from app.core.logging_config import logger
 from app.db.database import engine, Base
 from app.models.xgboost_service import xgboost_service
+from app.models.random_forest_service import random_forest_service
 from app.models.rag_service import rag_service
-from app.models.qwen_service import qwen_service
 from app.api import procurement, approval, suppliers, documents, evaluation, audit, system
 
 @asynccontextmanager
@@ -21,16 +21,16 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
 
     # 2. Load XGBoost Model Once
-    logger.info("Loading XGBoost Model...")
+    logger.info("Loading XGBoost Model & Preprocessor...")
     xgboost_service.load_models()
 
-    # 3. Load RAG FAISS Index & Documents Once
+    # 3. Load Random Forest Risk Model Once
+    logger.info("Loading Random Forest Risk Model & Preprocessor...")
+    random_forest_service.load_models()
+
+    # 4. Load RAG FAISS Index & Documents Once
     logger.info("Loading RAG Knowledge Base & FAISS Index...")
     rag_service.load_rag()
-
-    # 4. Check Qwen LoRA Adapter & Base Model
-    logger.info("Inspecting Qwen LoRA LLM Adapter...")
-    qwen_service.load_qwen()
 
     logger.info("==================================================")
     logger.info("  PROCUREAI BACKEND READY AND OPERATIONAL         ")

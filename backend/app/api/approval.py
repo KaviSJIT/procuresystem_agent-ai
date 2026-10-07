@@ -86,8 +86,41 @@ def approve_request(appr_id: str, action: ApprovalAction = Body(...), db: Sessio
         request_id=appr.procurement_request_id,
         status="APPROVED"
     )
+    audit_service.update_human_decision_in_json(appr.procurement_request_id, action.reviewed_by, "APPROVED")
 
     return {"status": "SUCCESS", "message": f"Approval request {appr_id} approved.", "approval": appr_id}
+
+@router.post("/{appr_id}/review")
+def send_for_review(appr_id: str, action: ApprovalAction = Body(...), db: Session = Depends(get_db)):
+    appr = db.query(ApprovalRequestDB).filter(ApprovalRequestDB.id == appr_id).first()
+    if not appr:
+        raise HTTPException(status_code=404, detail=f"Approval request {appr_id} not found")
+
+    appr.status = "SENT_FOR_REVIEW"
+    appr.reviewed_by = action.reviewed_by
+    appr.reviewed_at = datetime.datetime.utcnow()
+    appr.comments = action.comments or "Sent for further review"
+
+    req = db.query(ProcurementRequestDB).filter(ProcurementRequestDB.id == appr.procurement_request_id).first()
+    if req:
+        req.status = "UNDER_REVIEW"
+
+    db.commit()
+
+    audit_service.log_event(
+        db=db,
+        event_id=f"EVT-REVIEW-{appr_id}",
+        agent="Human Procurement Officer",
+        action="HUMAN_SENT_FOR_REVIEW",
+        input_summary=f"Reviewed Request: {appr.procurement_request_id} by {action.reviewed_by}",
+        output_summary=f"DECISION: SENT FOR REVIEW. Comments: {appr.comments}",
+        human_decision="SENT_FOR_REVIEW",
+        request_id=appr.procurement_request_id,
+        status="SENT_FOR_REVIEW"
+    )
+    audit_service.update_human_decision_in_json(appr.procurement_request_id, action.reviewed_by, "SENT_FOR_REVIEW")
+
+    return {"status": "SUCCESS", "message": f"Approval request {appr_id} sent for review.", "approval": appr_id}
 
 @router.post("/{appr_id}/reject")
 def reject_request(appr_id: str, action: ApprovalAction = Body(...), db: Session = Depends(get_db)):
@@ -117,5 +150,6 @@ def reject_request(appr_id: str, action: ApprovalAction = Body(...), db: Session
         request_id=appr.procurement_request_id,
         status="REJECTED"
     )
+    audit_service.update_human_decision_in_json(appr.procurement_request_id, action.reviewed_by, "REJECTED")
 
     return {"status": "SUCCESS", "message": f"Approval request {appr_id} rejected.", "approval": appr_id}

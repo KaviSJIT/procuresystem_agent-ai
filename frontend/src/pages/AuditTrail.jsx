@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { History, ShieldCheck, UserCheck, Cpu, Database, Search, ArrowDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { getAuditTrail } from '../services/api';
+
+function dotColor(evt) {
+  if (evt.human_decision === 'APPROVED') return 'bg-green-500';
+  if (evt.human_decision === 'REJECTED') return 'bg-red-500';
+  if (evt.agent?.includes('Human')) return 'bg-green-500';
+  if (evt.agent?.includes('XGBoost')) return 'bg-blue-500';
+  if (evt.agent?.includes('RAG')) return 'bg-amber-500';
+  if (evt.status === 'FAILED') return 'bg-red-400';
+  if (evt.status === 'SKIPPED') return 'bg-gray-300';
+  return 'bg-gray-400';
+}
 
 export default function AuditTrail() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchReq, setSearchReq] = useState('');
 
-  useEffect(() => {
-    loadAuditData();
-  }, []);
+  useEffect(() => { loadAuditData(); }, []);
 
   const loadAuditData = async (reqId = '') => {
     setLoading(true);
@@ -17,7 +26,7 @@ export default function AuditTrail() {
       const data = await getAuditTrail(reqId);
       setLogs(data || []);
     } catch (e) {
-      console.error("Audit load error:", e);
+      console.error('Audit load error:', e);
     } finally {
       setLoading(false);
     }
@@ -30,96 +39,85 @@ export default function AuditTrail() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Top Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center space-x-2">
-            <History className="w-6 h-6 text-cyan-400" />
-            <span>Audit Trail & Cryptographic Decision Traceability</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Preserves existing <code className="text-cyan-400">procurement_audit_log.json</code> records and tracks every agent action timestamp by timestamp.
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">Audit Trail</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Complete timestamped activity log for every procurement decision and agent action.</p>
         </div>
-        <div className="text-xs text-slate-400 bg-slate-800/60 border border-slate-700/60 px-3.5 py-2 rounded-xl shrink-0">
-          Total Recorded Events: <strong className="text-cyan-400 font-mono">{logs.length}</strong>
-        </div>
+        <span className="text-sm text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-md shrink-0">
+          Total Events: <strong className="text-gray-800">{logs.length}</strong>
+        </span>
       </div>
 
-      {/* Filter by Request ID */}
-      <form onSubmit={handleSearchSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex gap-3 shadow-xl">
+      <form onSubmit={handleSearchSubmit} className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search audit trail by Request ID or event ID..."
+            placeholder="Search by Request ID or event..."
             value={searchReq}
             onChange={(e) => setSearchReq(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-white border border-gray-300 rounded-md pl-9 pr-4 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1F4E79] transition-colors"
           />
         </div>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-xl shadow"
-        >
-          Filter Trail
+        <button type="submit" className="px-4 py-2 bg-[#1F4E79] hover:bg-[#1a4268] text-white font-medium text-sm rounded-md transition-colors">
+          Filter
         </button>
+        {searchReq && (
+          <button type="button" onClick={() => { setSearchReq(''); loadAuditData(''); }}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm rounded-md hover:bg-gray-50 transition-colors">
+            Clear
+          </button>
+        )}
       </form>
 
-      {/* Timeline View */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <div className="bg-white border border-gray-200 rounded-md shadow-sm p-6">
         {loading ? (
-          <p className="text-xs text-slate-500 text-center py-8">Loading audit timeline...</p>
+          <p className="text-sm text-gray-400 text-center py-8">Loading audit timeline...</p>
         ) : logs.length > 0 ? (
-          <div className="relative border-l-2 border-slate-800 ml-4 pl-6 space-y-8">
-            {logs.map((evt, idx) => {
-              const isHuman = evt.agent?.includes('Human') || evt.action?.includes('HUMAN');
-              const isXGB = evt.agent?.includes('XGBoost');
-              const isRAG = evt.agent?.includes('RAG');
-
-              return (
-                <div key={idx} className="relative group">
-                  {/* Circle Marker */}
-                  <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    isHuman
-                      ? 'bg-emerald-500 border-emerald-400 ring-4 ring-emerald-500/10'
-                      : isXGB
-                      ? 'bg-cyan-500 border-cyan-400 ring-4 ring-cyan-500/10'
-                      : 'bg-slate-700 border-slate-500'
-                  }`}></div>
-
-                  {/* Log Content Card */}
-                  <div className="bg-slate-800/40 border border-slate-800 hover:border-slate-700 p-4 rounded-xl space-y-2 transition-colors">
-                    <div className="flex flex-wrap items-center justify-between text-xs gap-2">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-white uppercase tracking-wider">{evt.action || 'EVENT'}</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px] border border-slate-700">
-                          {evt.agent || 'System'}
-                        </span>
-                      </div>
-                      <span className="font-mono text-cyan-400 text-[11px]">{evt.timestamp}</span>
+          <div className="relative border-l-2 border-gray-200 ml-3 pl-6 space-y-5">
+            {logs.map((evt, idx) => (
+              <div key={idx} className="relative">
+                <div className={`absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${dotColor(evt)}`}></div>
+                <div className="border border-gray-200 rounded-md p-4 space-y-2 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                      <span className="text-sm font-semibold text-gray-800">{evt.action || 'EVENT'}</span>
+                      <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium border border-gray-200">{evt.agent || 'System'}</span>
+                      {evt.status && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          evt.status === 'COMPLETED' ? 'bg-green-50 text-green-700' :
+                          evt.status === 'FAILED' ? 'bg-red-50 text-red-700' :
+                          evt.status === 'SKIPPED' ? 'bg-gray-100 text-gray-500' :
+                          'bg-amber-50 text-amber-700'
+                        }`}>{evt.status}</span>
+                      )}
                     </div>
-
-                    <p className="text-xs text-slate-300 font-medium">{evt.input_summary}</p>
-                    <p className="text-xs text-slate-400 bg-slate-900/60 p-2.5 rounded-lg font-mono border border-slate-800">
+                    <span className="text-xs font-mono text-gray-400">{evt.timestamp}</span>
+                  </div>
+                  {evt.input_summary && <p className="text-sm text-gray-700">{evt.input_summary}</p>}
+                  {evt.output_summary && (
+                    <p className="text-xs text-gray-500 bg-gray-50 p-2.5 rounded border border-gray-100 font-mono leading-relaxed">
                       {evt.output_summary}
                     </p>
-
-                    {evt.human_decision && (
-                      <div className="pt-1 flex items-center space-x-2 text-xs">
-                        <span className="text-slate-400">Human Decision:</span>
-                        <strong className={evt.human_decision === 'APPROVED' ? 'text-emerald-400' : 'text-rose-400'}>
-                          {evt.human_decision}
-                        </strong>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                  {evt.request_id && (
+                    <p className="text-xs text-gray-400">Request: <span className="font-mono text-gray-600">{evt.request_id}</span></p>
+                  )}
+                  {evt.human_decision && (
+                    <div className="flex items-center space-x-2 text-xs pt-1 border-t border-gray-100">
+                      <span className="text-gray-400">Human Decision:</span>
+                      <strong className={evt.human_decision === 'APPROVED' ? 'text-green-700' : evt.human_decision === 'REJECTED' ? 'text-red-700' : 'text-amber-700'}>
+                        {evt.human_decision}
+                      </strong>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-500 text-center py-8">
+          <p className="text-sm text-gray-400 text-center py-8">
             No audit events logged yet. Creating procurement requests will populate the timeline.
           </p>
         )}

@@ -75,6 +75,14 @@ export const rejectRequest = async (id, reviewedBy, comments) => {
   return res.data;
 };
 
+export const sendForReview = async (id, reviewedBy, comments) => {
+  const res = await api.post(`${API_BASE}/approvals/${id}/review`, {
+    reviewed_by: reviewedBy || 'Procurement Officer',
+    comments: comments || 'Sent for further review'
+  });
+  return res.data;
+};
+
 export const uploadDocument = async (formData) => {
   const res = await api.post(`${API_BASE}/documents/upload`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }

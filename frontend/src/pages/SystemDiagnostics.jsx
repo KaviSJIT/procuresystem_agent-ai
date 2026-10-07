@@ -1,132 +1,172 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, Database, CheckCircle2, XCircle, AlertTriangle, RefreshCw, Terminal, Code2 } from 'lucide-react';
+import { RefreshCw, Play, Cpu, Database, Bot } from 'lucide-react';
 import { getSystemModels, getHealth } from '../services/api';
+import api from '../services/api';
+
+const StatusDot = ({ loaded, warn }) => (
+  <span className={`w-2.5 h-2.5 rounded-full inline-block ${loaded ? 'bg-green-500' : warn ? 'bg-amber-400' : 'bg-red-500'}`}></span>
+);
 
 export default function SystemDiagnostics() {
   const [diagnostics, setDiagnostics] = useState(null);
-  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [e2eRunning, setE2eRunning] = useState(false);
+  const [e2eResult, setE2eResult] = useState(null);
 
-  useEffect(() => {
-    loadDiagnostics();
-  }, []);
+  useEffect(() => { loadDiagnostics(); }, []);
 
   const loadDiagnostics = async () => {
     setLoading(true);
     try {
-      const [diag, h] = await Promise.all([
-        getSystemModels(),
-        getHealth()
-      ]);
+      const diag = await getSystemModels();
       setDiagnostics(diag);
-      setHealth(h);
     } catch (e) {
-      console.error("Diagnostics load error:", e);
+      console.error('Diagnostics load error:', e);
     } finally {
       setLoading(false);
     }
   };
 
+  const runE2ETest = async () => {
+    setE2eRunning(true); setE2eResult(null);
+    try {
+      const res = await api.post('/api/system/end-to-end-test');
+      setE2eResult(res.data);
+    } catch (e) {
+      setE2eResult({ overall: '🔴 Failed', error: e.response?.data?.detail || e.message, stages: [] });
+    } finally {
+      setE2eRunning(false);
+    }
+  };
+
   const xgb = diagnostics?.xgboost_final || {};
+  const rf = diagnostics?.random_forest_final || {};
   const rag = diagnostics?.rag_faiss || {};
-  const qwen = diagnostics?.qwen_adapter || {};
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Top Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Cpu className="w-6 h-6 text-cyan-400" />
-            <span>AI Model Artifact Diagnostics & Health</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time status inspection of verified trained model files in <code className="text-cyan-400">models/</code> directory.
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">System Diagnostics</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Real-time status of trained model artifacts and AI components.</p>
         </div>
-        <button
-          onClick={loadDiagnostics}
-          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center space-x-1.5 shrink-0"
-        >
+        <button onClick={loadDiagnostics} className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors shrink-0">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Re-inspect Models</span>
+          <span>Refresh</span>
         </button>
       </div>
 
-      {/* Grid Cards for Each Model Artifact */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 1. XGBoost Diagnostics Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">XGBoost Model</span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                xgb.loaded ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400'
-              }`}>
-                {xgb.loaded ? 'LOADED' : 'UNLOADED'}
-              </span>
+      {/* Model Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* XGBoost */}
+        <div className="bg-white border border-gray-200 rounded-md shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Cpu className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-semibold text-gray-800">XGBoost Model</span>
             </div>
-
-            <div className="text-xs space-y-1.5 font-mono">
-              <p className="text-slate-400">File: <span className="text-slate-200">models/xgboost_procurement_final.pkl</span></p>
-              <p className="text-slate-400">Features: <span className="text-cyan-400">{xgb.features_count || 14} Expected Features</span></p>
-              <p className="text-slate-400">Environment: <span className="text-slate-200">scikit-learn 1.6.1 + xgboost 2.1.4</span></p>
+            <StatusDot loaded={xgb.loaded} />
+          </div>
+          <p className="text-xs text-gray-500">{xgb.badge || (xgb.loaded ? '🟢 Loaded' : '🔴 Not loaded')}</p>
+          <div className="text-xs space-y-1 text-gray-500 font-mono">
+            <p>File: xgboost_procurement_final.pkl</p>
+            <p>Features: <span className="text-gray-700">{xgb.features_count || 14}</span></p>
+          </div>
+          {xgb.error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{xgb.error}</p>}
+          {xgb.loaded && (
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-400 font-semibold mb-1">Features:</p>
+              <div className="flex flex-wrap gap-1">
+                {(xgb.features || []).map((f, i) => (
+                  <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{f}</span>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400">
-            {xgb.loaded ? '✓ XGBoost Pipeline ready for risk prediction.' : `Error: ${xgb.error}`}
-          </div>
+          )}
         </div>
 
-        {/* 2. RAG FAISS Index Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">RAG & FAISS Index</span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                rag.loaded ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400'
-              }`}>
-                {rag.loaded ? 'LOADED' : 'UNLOADED'}
-              </span>
+        {/* RAG FAISS */}
+        <div className="bg-white border border-gray-200 rounded-md shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Database className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-semibold text-gray-800">RAG / FAISS</span>
             </div>
-
-            <div className="text-xs space-y-1.5 font-mono">
-              <p className="text-slate-400">Index Type: <span className="text-slate-200">IndexFlatIP</span></p>
-              <p className="text-slate-400">Vectors: <span className="text-cyan-400">{rag.vectors || 4790}</span></p>
-              <p className="text-slate-400">Dimension: <span className="text-cyan-400">{rag.dimension || 384}</span></p>
-              <p className="text-slate-400">Documents: <span className="text-slate-200">{rag.documents || 4790}</span></p>
-            </div>
+            <StatusDot loaded={rag.loaded} />
           </div>
-
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400">
-            {rag.loaded ? '✓ FAISS index & MiniLM-L6-v2 embedder ready.' : 'RAG artifacts missing.'}
+          <p className="text-xs text-gray-500">{rag.badge || (rag.loaded ? '🟢 Loaded' : '🔴 Not loaded')}</p>
+          <div className="text-xs space-y-1 text-gray-500 font-mono">
+            <p>Index: procurement_faiss.index</p>
+            <p>Vectors: <span className="text-gray-700">{rag.vectors?.toLocaleString() || 4790}</span></p>
+            <p>Dimensions: <span className="text-gray-700">{rag.dimension || 384}</span></p>
+            <p>Documents: <span className="text-gray-700">{rag.documents?.toLocaleString() || 4790}</span></p>
           </div>
+          {rag.error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{rag.error}</p>}
         </div>
 
-        {/* 3. Qwen LoRA Adapter Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">Qwen LoRA Adapter</span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                qwen.loaded ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-              }`}>
-                {qwen.loaded ? 'LOADED' : 'BASE MODEL NEEDED'}
-              </span>
+        {/* Random Forest */}
+        <div className="bg-white border border-gray-200 rounded-md shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Bot className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-semibold text-gray-800">Random Forest Model</span>
             </div>
-
-            <div className="text-xs space-y-1.5 font-mono">
-              <p className="text-slate-400">Adapter Path: <span className="text-slate-200">models/qwen_procurement_llm</span></p>
-              <p className="text-slate-400">Base Model: <span className="text-amber-400">{qwen.base_model || 'Not configured'}</span></p>
-              <p className="text-slate-400">Peft Target: <span className="text-slate-300">o_proj, q_proj, k_proj, v_proj</span></p>
-            </div>
+            <StatusDot loaded={rf.loaded} />
           </div>
-
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-amber-400 font-medium">
-            {qwen.reason || 'Qwen adapter found. Base model configuration required.'}
+          <p className="text-xs text-gray-500">{rf.badge || (rf.loaded ? '🟢 Loaded' : '🔴 Not loaded')}</p>
+          <div className="text-xs space-y-1 text-gray-500 font-mono">
+            <p>File: random_forest_procurement_risk_final.pkl</p>
+            <p>Features: <span className="text-gray-700">{rf.features_count || 0}</span></p>
+            <p>Classes: <span className="text-gray-700">{(rf.classes || []).join(', ') || 'LOW, MEDIUM, HIGH'}</span></p>
           </div>
+          {rf.error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{rf.error}</p>}
         </div>
+      </div>
+
+      {/* End-to-End Test */}
+      <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">End-to-End System Test</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Runs a real test procurement through the complete pipeline and reports each stage.</p>
+          </div>
+          <button
+            onClick={runE2ETest}
+            disabled={e2eRunning}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-[#1F4E79] hover:bg-[#1a4268] disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
+          >
+            {e2eRunning ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /><span>Running...</span></> : <><Play className="w-3.5 h-3.5" /><span>Run End-to-End Test</span></>}
+          </button>
+        </div>
+
+        {e2eResult && (
+          <div className="p-5 space-y-4">
+            <div className={`text-sm font-semibold px-4 py-2 rounded-md ${
+              e2eResult.overall?.includes('🟢') ? 'bg-green-50 text-green-700 border border-green-200' :
+              e2eResult.overall?.includes('🟡') ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+              'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {e2eResult.overall} — {e2eResult.passed}/{e2eResult.total_stages} stages passed
+              {e2eResult.warned > 0 && `, ${e2eResult.warned} warned`}
+              {e2eResult.failed > 0 && `, ${e2eResult.failed} failed`}
+            </div>
+
+            <div className="space-y-2">
+              {(e2eResult.stages || []).map((stage, i) => (
+                <div key={i} className="flex items-start justify-between border border-gray-200 rounded-md p-3 text-sm">
+                  <div className="flex items-start space-x-3 flex-1">
+                    <span className="text-base shrink-0">{stage.status?.split(' ')[0]}</span>
+                    <div>
+                      <p className="font-medium text-gray-800">{stage.stage}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{stage.detail}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono text-gray-400 shrink-0 ml-3">{stage.time_ms}ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

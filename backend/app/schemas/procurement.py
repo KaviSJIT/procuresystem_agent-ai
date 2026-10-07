@@ -17,8 +17,11 @@ class RiskPrediction(BaseModel):
     risk_score: float
     risk_level: str
     prediction: str
-    raw_prediction: Optional[int] = 0
-    model: str = "xgboost_procurement_final"
+    risk_confidence: Optional[float] = None
+    predicted_award: Optional[float] = None
+    award_difference: Optional[float] = None
+    difference_percent: Optional[float] = None
+    model: str = "random_forest_procurement_risk_final"
     features_evaluated: Optional[List[str]] = []
 
 class RAGSearchResult(BaseModel):
@@ -33,7 +36,17 @@ class ProcurementResponse(BaseModel):
     budget: float
     status: str
     created_at: datetime.datetime
+    predicted_award: Optional[float] = None
+    award_difference: Optional[float] = None
+    difference_percent: Optional[float] = None
+    risk_level: Optional[str] = None
+    risk_confidence: Optional[float] = None
+    compliance_score: Optional[int] = None
+    compliance_percentage: Optional[float] = None
+    compliance_evidence: Optional[Dict[str, Any]] = None
     risk_assessment: Optional[Dict[str, Any]] = None
+    xgboost_prediction: Optional[Dict[str, Any]] = None
+    random_forest_prediction: Optional[Dict[str, Any]] = None
     rag_evidence: Optional[Dict[str, Any]] = None
     qwen_analysis: Optional[Dict[str, Any]] = None
     agent_results: Optional[Dict[str, Any]] = None

@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck2, Clock, CheckCircle2, XCircle, Eye, RefreshCw } from 'lucide-react';
+import { RefreshCw, Eye } from 'lucide-react';
 import { getApprovals } from '../services/api';
 import { RiskBadge } from '../components/RiskBadge';
 import { StatusBadge } from '../components/StatusBadge';
 import ApprovalModal from '../components/ApprovalModal';
+
+const filterTabs = [
+  { value: '', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
 
 export default function ApprovalCenter() {
   const [approvals, setApprovals] = useState([]);
@@ -11,9 +18,7 @@ export default function ApprovalCenter() {
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedApproval, setSelectedApproval] = useState(null);
 
-  useEffect(() => {
-    loadApprovals();
-  }, [filterStatus]);
+  useEffect(() => { loadApprovals(); }, [filterStatus]);
 
   const loadApprovals = async () => {
     setLoading(true);
@@ -21,7 +26,7 @@ export default function ApprovalCenter() {
       const data = await getApprovals(filterStatus);
       setApprovals(data || []);
     } catch (e) {
-      console.error("Error loading approvals:", e);
+      console.error('Error loading approvals:', e);
     } finally {
       setLoading(false);
     }
@@ -29,20 +34,17 @@ export default function ApprovalCenter() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center space-x-2">
-            <FileCheck2 className="w-6 h-6 text-cyan-400" />
-            <span>Human-in-the-Loop Approval Center</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Review multi-agent recommendations, inspect XGBoost risk scores and RAG evidence, and approve or reject procurement requests.
+          <h1 className="text-xl font-bold text-gray-900">Approval Center</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Review and approve AI-assisted procurement recommendations.
           </p>
         </div>
         <button
           onClick={loadApprovals}
-          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center space-x-1.5 shrink-0"
+          className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -50,68 +52,63 @@ export default function ApprovalCenter() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 p-1.5 rounded-xl w-fit">
-        {['', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
+      <div className="flex items-center space-x-1 border-b border-gray-200">
+        {filterTabs.map((tab) => (
           <button
-            key={st}
-            onClick={() => setFilterStatus(st)}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              filterStatus === st
-                ? 'bg-cyan-600 text-white shadow'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            key={tab.value}
+            onClick={() => setFilterStatus(tab.value)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              filterStatus === tab.value
+                ? 'border-[#1F4E79] text-[#1F4E79]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {st === '' ? 'All Approvals' : st}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Approvals Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-800/60 text-slate-400 uppercase tracking-wider font-semibold">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider font-semibold border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3.5">Approval ID</th>
-                <th className="px-6 py-3.5">Procurement Title</th>
-                <th className="px-6 py-3.5">Budget</th>
-                <th className="px-6 py-3.5">XGBoost Risk</th>
-                <th className="px-6 py-3.5">AI Confidence</th>
-                <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5 text-right">Action</th>
+                <th className="px-5 py-3">Approval ID</th>
+                <th className="px-5 py-3">Procurement Title</th>
+                <th className="px-5 py-3">Budget</th>
+                <th className="px-5 py-3">Predicted Award</th>
+                <th className="px-5 py-3">Risk Level</th>
+                <th className="px-5 py-3">AI Confidence</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-gray-100 text-gray-700">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
-                    Loading approval queue...
-                  </td>
-                </tr>
+                <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">Loading approval queue...</td></tr>
               ) : approvals.length > 0 ? (
                 approvals.map((appr) => {
                   const req = appr.procurement_request || {};
                   const risk = appr.risk_assessment || {};
+                  const predAward = risk.predicted_award || appr.ai_recommendation?.predicted_award;
                   return (
-                    <tr key={appr.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-6 py-4 font-mono font-bold text-cyan-400">{appr.id}</td>
-                      <td className="px-6 py-4 font-semibold text-white">{req.title || 'Procurement Request'}</td>
-                      <td className="px-6 py-4 font-mono font-semibold text-cyan-400">
-                        ₹{(req.budget || 0).toLocaleString()}
+                    <tr key={appr.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4 font-mono text-xs text-gray-500">{appr.id}</td>
+                      <td className="px-5 py-4 font-medium text-gray-900">{req.title || 'Procurement Request'}</td>
+                      <td className="px-5 py-4 font-mono font-medium text-gray-800">₹{(req.budget || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4 font-mono font-medium text-[#1F4E79]">
+                        {predAward ? `₹${Number(predAward).toLocaleString()}` : '—'}
                       </td>
-                      <td className="px-6 py-4">
-                        <RiskBadge level={risk.risk_level} score={risk.risk_score} />
+                      <td className="px-5 py-4"><RiskBadge level={risk.risk_level || 'LOW'} score={risk.risk_score} /></td>
+                      <td className="px-5 py-4 font-mono font-semibold text-gray-700">
+                        {risk.risk_confidence ? `${Number(risk.risk_confidence).toFixed(1)}%` : `${Math.round((appr.confidence || 0) * 100)}%`}
                       </td>
-                      <td className="px-6 py-4 font-mono font-bold text-slate-200">
-                        {Math.round((appr.confidence || 0) * 100)}%
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={appr.status} />
-                      </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-4"><StatusBadge status={appr.status} /></td>
+                      <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => setSelectedApproval(appr)}
-                          className="px-3.5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 rounded-lg font-semibold transition-colors flex items-center space-x-1 ml-auto"
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-[#1F4E79] border border-[#1F4E79] rounded hover:bg-blue-50 transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View & Review</span>
@@ -121,18 +118,13 @@ export default function ApprovalCenter() {
                   );
                 })
               ) : (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
-                    No approval requests match the selected status filter.
-                  </td>
-                </tr>
+                <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">No approval requests match the selected filter.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Decision Review Modal */}
       {selectedApproval && (
         <ApprovalModal
           approval={selectedApproval}

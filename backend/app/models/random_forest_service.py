@@ -12,14 +12,10 @@ if not hasattr(sklearn.compose._column_transformer, "_RemainderColsList"):
         pass
     sklearn.compose._column_transformer._RemainderColsList = _RemainderColsList
 
-# 21 features expected by procurement_preprocessor.pkl
-XGB_FEATURES = [
+# 18 features expected by random_forest_preprocessor_final.pkl
+RF_FEATURES = [
     'tender_value_amount',
     'tender_numberOfTenderers',
-    'tender_allowPreferentialBidder',
-    'tender_allowTwoStageBid',
-    'tender_evaluation_generalTechnicalEvaluationAllowed',
-    'tender_evaluation_itemWiseTechnicalEvaluationAllowed',
     'tender_tenderPeriod_durationInDays',
     'tender_contractPeriod_durationInDays',
     'item_count',
@@ -29,6 +25,7 @@ XGB_FEATURES = [
     'exemption_allowed_count',
     'buyer_party_count',
     'document_count',
+    'tender_evaluation_itemWiseTechnicalEvaluationAllowed',
     'tender_procurementMethod',
     'tender_process',
     'tender_mainProcurementCategory',
@@ -37,44 +34,47 @@ XGB_FEATURES = [
     'tender_classification_scheme'
 ]
 
-class XGBoostService:
+class RandomForestService:
     def __init__(self):
         self.model = None
         self.preprocessor = None
-        self.feature_names = XGB_FEATURES
+        self.feature_names = RF_FEATURES
+        self.classes = ['HIGH', 'LOW', 'MEDIUM']
         self.is_loaded = False
         self.load_error = None
 
     def load_models(self):
-        """Load trained XGBoost model and preprocessor once at backend startup."""
+        """Load trained Random Forest model and preprocessor once at backend startup."""
         try:
-            model_path = settings.XGBOOST_MODEL_PATH
-            prep_path = settings.XGBOOST_PREPROCESSOR_PATH
+            model_path = settings.RANDOM_FOREST_MODEL_PATH
+            prep_path = settings.RANDOM_FOREST_PREPROCESSOR_PATH
 
             if not os.path.exists(model_path):
-                raise FileNotFoundError(f"XGBoost model file not found at {model_path}")
+                raise FileNotFoundError(f"Random Forest model file not found at {model_path}")
             if not os.path.exists(prep_path):
-                raise FileNotFoundError(f"XGBoost preprocessor file not found at {prep_path}")
+                raise FileNotFoundError(f"Random Forest preprocessor file not found at {prep_path}")
 
             self.model = joblib.load(model_path)
             self.preprocessor = joblib.load(prep_path)
 
             if hasattr(self.preprocessor, "feature_names_in_"):
                 self.feature_names = list(self.preprocessor.feature_names_in_)
+            if hasattr(self.model, "classes_"):
+                self.classes = list(self.model.classes_)
 
             self.is_loaded = True
             self.load_error = None
             logger.info(
-                f"Successfully loaded XGBoost model from {model_path} and preprocessor from {prep_path}. "
-                f"Features: {len(self.feature_names)}"
+                f"Successfully loaded Random Forest model from {model_path} and preprocessor from {prep_path}. "
+                f"Features: {len(self.feature_names)}, Classes: {self.classes}"
             )
         except Exception as e:
             self.is_loaded = False
             self.load_error = str(e)
-            logger.error(f"Failed to load XGBoost model/preprocessor: {e}")
+            logger.error(f"Failed to load Random Forest model/preprocessor: {e}")
 
     def prepare_input_dataframe(self, procurement_data: dict) -> pd.DataFrame:
-        """Map incoming procurement payload to XGBoost preprocessor features."""
+        """Map incoming procurement payload to Random Forest preprocessor features."""
         tender_val = float(procurement_data.get("budget", procurement_data.get("tender_value_amount", 0.0)))
         num_tenderers = float(procurement_data.get("num_tenderers", procurement_data.get("tender_numberOfTenderers", 3.0)))
         tender_days = float(procurement_data.get("required_days", procurement_data.get("tender_tenderPeriod_durationInDays", 30.0)))
@@ -95,10 +95,6 @@ class XGBoostService:
         row_data = {
             'tender_value_amount': [tender_val],
             'tender_numberOfTenderers': [num_tenderers],
-            'tender_allowPreferentialBidder': [str(procurement_data.get("allow_preferential", "No"))],
-            'tender_allowTwoStageBid': [str(procurement_data.get("allow_two_stage", "No"))],
-            'tender_evaluation_generalTechnicalEvaluationAllowed': [str(procurement_data.get("general_tech_eval", "Yes"))],
-            'tender_evaluation_itemWiseTechnicalEvaluationAllowed': [str(procurement_data.get("item_tech_eval", "No"))],
             'tender_tenderPeriod_durationInDays': [tender_days],
             'tender_contractPeriod_durationInDays': [contract_days],
             'item_count': [float(procurement_data.get("item_count", 1.0))],
@@ -108,6 +104,7 @@ class XGBoostService:
             'exemption_allowed_count': [float(procurement_data.get("exemption_allowed_count", 0.0))],
             'buyer_party_count': [float(procurement_data.get("buyer_party_count", 1.0))],
             'document_count': [float(procurement_data.get("document_count", 1.0))],
+            'tender_evaluation_itemWiseTechnicalEvaluationAllowed': [str(procurement_data.get("item_tech_eval", "No"))],
             'tender_procurementMethod': [proc_method],
             'tender_process': [process],
             'tender_mainProcurementCategory': [category],
@@ -116,72 +113,46 @@ class XGBoostService:
             'tender_classification_scheme': [classification]
         }
         df = pd.DataFrame(row_data)
-        # Ensure column ordering matches preprocessor expectation
         return df[self.feature_names]
 
-    def predict_award_value(self, procurement_data: dict) -> dict:
+    def predict_risk(self, procurement_data: dict) -> dict:
         """
-        Predict total_award_value using trained XGBoost model and preprocessor.
-        Preserves inference logic from Kaggle notebook.
+        Predict procurement risk level and confidence using Random Forest.
+        Returns LOW, MEDIUM, or HIGH and risk_confidence.
         """
         if not self.is_loaded or self.model is None or self.preprocessor is None:
-            raise RuntimeError(f"XGBoost service is not loaded. Error: {self.load_error}")
+            raise RuntimeError(f"Random Forest service is not loaded. Error: {self.load_error}")
 
         df_input = self.prepare_input_dataframe(procurement_data)
         X_trans = self.preprocessor.transform(df_input)
-        raw_pred = float(self.model.predict(X_trans)[0])
 
-        tender_val = float(procurement_data.get("budget", procurement_data.get("tender_value_amount", 0.0)))
-        if tender_val > 0:
-            predicted_award = float(round(tender_val * raw_pred, 2))
-            award_difference = float(round(predicted_award - tender_val, 2))
-            difference_percent = float(round((award_difference / tender_val) * 100.0, 2))
+        raw_pred = str(self.model.predict(X_trans)[0])
+        probas = self.model.predict_proba(X_trans)[0]
+        max_proba = float(np.max(probas))
+        risk_confidence = float(round(max_proba * 100.0, 2))
+
+        # Risk score representation for normalized scale (0.0 to 1.0)
+        class_proba_map = {cls: float(round(p * 100.0, 2)) for cls, p in zip(self.classes, probas)}
+        if raw_pred == "HIGH":
+            normalized_score = 0.80
+        elif raw_pred == "MEDIUM":
+            normalized_score = 0.50
         else:
-            predicted_award = 0.0
-            award_difference = 0.0
-            difference_percent = 0.0
+            normalized_score = 0.20
+
+        prediction_label = f"Random Forest Risk Assessment: {raw_pred} (Confidence: {risk_confidence:.1f}%)"
 
         return {
-            "tender_value": tender_val,
-            "predicted_award": predicted_award,
-            "award_difference": award_difference,
-            "difference_percent": difference_percent,
-            "award_multiplier": round(raw_pred, 4),
-            "model": "xgboost_procurement_model",
-            "features_evaluated": self.feature_names
-        }
-
-    def predict_procurement_risk(self, procurement_data: dict) -> dict:
-        """Compatibility wrapper for callers expecting predict_procurement_risk."""
-        award_res = self.predict_award_value(procurement_data)
-        diff_pct = award_res["difference_percent"]
-        multiplier = award_res["award_multiplier"]
-
-        if diff_pct > 35.0 or multiplier > 1.35:
-            risk_level = "HIGH"
-            risk_score = 0.75
-        elif diff_pct > 15.0 or multiplier > 1.15:
-            risk_level = "MEDIUM"
-            risk_score = 0.45
-        else:
-            risk_level = "LOW"
-            risk_score = 0.20
-
-        prediction_label = (
-            f"Predicted Award: ₹{award_res['predicted_award']:,.2f} ({diff_pct:+.1f}% vs Tender Value)"
-        )
-
-        return {
-            "risk_score": risk_score,
-            "risk_level": risk_level,
+            "risk_level": raw_pred,
+            "risk_confidence": risk_confidence,
+            "confidence": round(max_proba, 4),
+            "risk_score": normalized_score,
             "prediction": prediction_label,
-            "award_prediction": award_res,
-            "tender_value": award_res["tender_value"],
-            "predicted_award": award_res["predicted_award"],
-            "award_difference": award_res["award_difference"],
-            "difference_percent": award_res["difference_percent"],
-            "model": "xgboost_procurement_model",
-            "features_evaluated": self.feature_names
+            "class_probabilities": class_proba_map,
+            "model": "random_forest_procurement_risk_final",
+            "features_evaluated": self.feature_names,
+            "is_proxy_label": True,
+            "note": "Prototype proxy-label procurement risk assessment model. Evaluates procurement parameter risk."
         }
 
-xgboost_service = XGBoostService()
+random_forest_service = RandomForestService()

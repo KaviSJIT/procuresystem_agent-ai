@@ -5,9 +5,9 @@ class ApprovalAgent:
     """
     Approval Agent
     Responsibilities:
-    - determine whether human approval is required
-    - prepare approval request object
-    - track decision states
+    - Enforces human-in-the-loop governance
+    - Prepares approval request object
+    - Ensures AI NEVER automatically approves a procurement
     """
     def __init__(self):
         self.agent_name = "Approval Agent"
@@ -16,29 +16,29 @@ class ApprovalAgent:
         self,
         procurement_data: dict,
         risk_result: dict,
-        recommendation_result: dict
+        recommendation_result: dict,
+        compliance_result: dict = None
     ) -> dict:
-        logger.info(f"[{self.agent_name}] Evaluating human approval requirement...")
+        logger.info(f"[{self.agent_name}] Evaluating approval governance...")
 
-        budget = float(procurement_data.get("budget", 0))
-        risk_score = risk_result.get("risk_score", 0.0)
+        budget = float(procurement_data.get("budget", procurement_data.get("tender_value_amount", 0)))
+        rec_title = recommendation_result.get("recommendation", "MANUAL REVIEW REQUIRED")
 
-        # Requirement rules: High budget or elevated risk requires human approval
-        requires_human = (budget >= 1000000) or (risk_score >= 0.40)
+        # In accordance with governance rules, AI NEVER automatically approves.
+        # Human approval is always required.
+        requires_human = True
 
-        reasoning = []
-        if budget >= 1000000:
-            reasoning.append(f"Budget ₹{budget:,.2f} exceeds automatic approval threshold (₹10 Lakhs).")
-        if risk_score >= 0.40:
-            reasoning.append(f"XGBoost risk score ({risk_score}) indicates elevated procurement risk.")
-
-        if not requires_human:
-            reasoning.append("Budget and risk scores within safe automated execution bounds.")
+        reasoning = [
+            f"AI recommendation: {rec_title}.",
+            "Procurement governance mandates human reviewer decision before tender award or publication.",
+            f"Procurement value: ₹{budget:,.2f}."
+        ]
 
         return {
             "agent": self.agent_name,
-            "requires_human_approval": requires_human,
-            "approval_status": "PENDING" if requires_human else "AUTO_APPROVED",
+            "requires_human_approval": True,
+            "approval_status": "PENDING",
+            "recommendation": rec_title,
             "approval_reasons": reasoning
         }
 
