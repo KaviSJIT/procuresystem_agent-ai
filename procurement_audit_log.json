@@ -1616,5 +1616,157 @@
     "confidence": null,
     "human_decision": "APPROVED",
     "status": "APPROVED"
+  },
+  {
+    "event_id": "E2E-TEST-989e9d",
+    "timestamp": "2026-10-07T04:42:37.959313",
+    "request_id": "E2E-TEST",
+    "agent": "System Diagnostics",
+    "action": "DIAGNOSTIC_E2E_TEST",
+    "input_summary": "Verified complete 7-stage ML and RAG pipeline",
+    "output_summary": "Completed 6 stages successfully.",
+    "confidence": null,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-01-6052f5",
+    "timestamp": "2026-10-07T05:10:12.623946",
+    "request_id": "REQ-0B1391D8",
+    "agent": "Orchestrator",
+    "action": "REQUEST_CREATED",
+    "input_summary": "Procurement Title: Construction Steel Procurement, Budget: \u20b95,000,000.00",
+    "output_summary": "Procurement request registered and queued for analysis pipeline.",
+    "confidence": null,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-02-9fc25b",
+    "timestamp": "2026-10-07T05:10:12.695356",
+    "request_id": "REQ-0B1391D8",
+    "agent": "XGBoost Agent",
+    "action": "AWARD_PREDICTION",
+    "input_summary": "Evaluated features for Construction Steel Procurement. Tender Value: \u20b95,000,000.00",
+    "output_summary": "Predicted Award: \u20b93,466,889.86 | Difference: \u20b9-1,533,110.14 (-30.7%) | Multiplier: 0.6934x",
+    "confidence": 0.9,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-03-fc30e0",
+    "timestamp": "2026-10-07T05:10:12.886942",
+    "request_id": "REQ-0B1391D8",
+    "agent": "Random Forest Agent",
+    "action": "RISK_PREDICTION",
+    "input_summary": "Classification features evaluated for Construction Steel Procurement",
+    "output_summary": "Risk Level: LOW | Confidence: 50.1% | Class Probas: {'HIGH': 18.05, 'LOW': 50.12, 'MEDIUM': 31.83}",
+    "confidence": 0.5012,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-04-722d35",
+    "timestamp": "2026-10-07T05:10:13.036401",
+    "request_id": "REQ-0B1391D8",
+    "agent": "RAG Agent",
+    "action": "KNOWLEDGE_RETRIEVAL",
+    "input_summary": "Search Query: Construction Steel Procurement 100 tons Structural Steel works Procurement of 100 tons high-grade st...",
+    "output_summary": "Retrieved 5 historical tender references. Top Match Score: 0.8515",
+    "confidence": null,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-05-07f43c",
+    "timestamp": "2026-10-07T05:10:13.160050",
+    "request_id": "REQ-0B1391D8",
+    "agent": "Compliance Agent",
+    "action": "COMPLIANCE_EVIDENCE_RETRIEVAL",
+    "input_summary": "Verified 4 statutory criteria: PAN, Registration Certificate, Bid Affidavit, Work Completion Certificate",
+    "output_summary": "Evidence Score: 4/4 (100.0%) | Status: Evidence Found | Checks: {'PAN': 'FOUND', 'Registration Certificate': 'FOUND', 'Bid Affidavit': 'FOUND', 'Work Completion Certificate': 'FOUND'}",
+    "confidence": 1.0,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "event_id": "EVT-07-832813",
+    "timestamp": "2026-10-07T05:10:13.300016",
+    "request_id": "REQ-0B1391D8",
+    "agent": "Decision Engine",
+    "action": "MULTI_AGENT_SYNTHESIS",
+    "input_summary": "Synthesized XGBoost, Random Forest, RAG, and Compliance evidence",
+    "output_summary": "Recommendation: RECOMMENDED FOR HUMAN APPROVAL | Reasoning: Random Forest model evaluated LOW procurement risk (50.1% confidence). Complete statutory evidence found (4/4). XGBoost estimated award: \u20b93,466,889.86 (-30.7%).",
+    "confidence": 0.5012,
+    "human_decision": null,
+    "status": "COMPLETED"
+  },
+  {
+    "timestamp": "2026-10-07T05:10:13.346965",
+    "system": "Agentic AI Procurement Management",
+    "tender_id": "REQ-0B1391D8",
+    "tender": {
+      "tender_value": 5000000.0,
+      "predicted_award": 3466889.86,
+      "award_difference": -1533110.14,
+      "difference_percent": -30.66
+    },
+    "risk": {
+      "level": "LOW",
+      "confidence": 50.12
+    },
+    "compliance": {
+      "checks": {
+        "PAN": "FOUND",
+        "Registration Certificate": "FOUND",
+        "Bid Affidavit": "FOUND",
+        "Work Completion Certificate": "FOUND"
+      },
+      "score": 4,
+      "total": 4,
+      "percentage": 100.0
+    },
+    "decision": {
+      "recommendation": "RECOMMENDED FOR HUMAN APPROVAL"
+    },
+    "human_approval": {
+      "reviewer": "Pending Human Reviewer",
+      "approval_status": "PENDING",
+      "review_timestamp": null,
+      "tender_value": 5000000.0,
+      "predicted_award": 3466889.86,
+      "risk_level": "LOW",
+      "risk_confidence": 50.12,
+      "compliance_score": 4,
+      "compliance_total": 4,
+      "recommendation": "RECOMMENDED FOR HUMAN APPROVAL"
+    },
+    "performance": {
+      "processing_time_sec": 0.739
+    }
+  },
+  {
+    "event_id": "EVT-DECISION-APP-5EFBED06",
+    "timestamp": "2026-10-07T05:10:55.682522",
+    "request_id": "REQ-0B1391D8",
+    "agent": "Human Procurement Officer",
+    "action": "HUMAN_APPROVAL_DECISION",
+    "input_summary": "Reviewed Request: REQ-0B1391D8 by Procurement Officer",
+    "output_summary": "DECISION: APPROVED. Comments: Approved after multi-agent AI verification",
+    "confidence": null,
+    "human_decision": "APPROVED",
+    "status": "APPROVED"
+  },
+  {
+    "event_id": "E2E-TEST-4cc1f1",
+    "timestamp": "2026-10-07T05:11:59.911710",
+    "request_id": "E2E-TEST",
+    "agent": "System Diagnostics",
+    "action": "DIAGNOSTIC_E2E_TEST",
+    "input_summary": "Verified complete 7-stage ML and RAG pipeline",
+    "output_summary": "Completed 6 stages successfully.",
+    "confidence": null,
+    "human_decision": null,
+    "status": "COMPLETED"
   }
 ]

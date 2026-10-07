@@ -18,7 +18,7 @@ export default function Sidebar() {
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/new-procurement', label: 'New Procurement', icon: PlusCircle },
     { path: '/analysis', label: 'AI Analysis', icon: SearchCode },
-    { path: '/suppliers', label: 'Suppliers', icon: Users },
+    { path: '/suppliers', label: 'Tender Records', icon: Users },
     { path: '/approvals', label: 'Approval Center', icon: FileCheck2 },
     { path: '/documents', label: 'Document Intel', icon: FileText },
     { path: '/audit', label: 'Audit Trail', icon: History },
@@ -66,7 +66,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 text-[11px] text-gray-400">
         <p className="font-semibold text-gray-500">Agentic AI Research</p>
-        <p>XGBoost · RAG FAISS · Qwen LoRA</p>
+        <p>XGBoost · Random Forest · RAG FAISS</p>
       </div>
     </aside>
   );

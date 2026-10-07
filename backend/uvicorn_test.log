@@ -1,0 +1,24 @@
+INFO:     Started server process [5456]
+INFO:     Waiting for application startup.
+[2026-10-07 09:25:12] [INFO] [procure_ai] ==================================================
+[2026-10-07 09:25:12] [INFO] [procure_ai]   STARTING PROCUREAI FASTAPI BACKEND SERVER       
+[2026-10-07 09:25:12] [INFO] [procure_ai] ==================================================
+[2026-10-07 09:25:12] [INFO] [procure_ai] Creating database tables...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading XGBoost Model & Preprocessor...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Successfully loaded XGBoost model from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\xgboost\xgboost_procurement_model.pkl and preprocessor from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\xgboost\procurement_preprocessor.pkl. Features: 21
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading Random Forest Risk Model & Preprocessor...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Successfully loaded Random Forest model from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\random_forest\random_forest_procurement_risk_final.pkl and preprocessor from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\random_forest\random_forest_preprocessor_final.pkl. Features: 18, Classes: ['HIGH', 'LOW', 'MEDIUM']
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading RAG Knowledge Base & FAISS Index...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading FAISS index from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\rag\procurement_faiss.index...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading enriched RAG documents dataframe from C:\Users\kaviy\OneDrive\Desktop\procuresystem\models\rag\enriched_rag_documents.pkl...
+[2026-10-07 09:25:12] [INFO] [procure_ai] Loading SentenceTransformer embedder: sentence-transformers/all-MiniLM-L6-v2...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 2934.81it/s]
+[2026-10-07 09:25:26] [INFO] [procure_ai] RAG Service successfully loaded. Total vectors: 3778, Total docs: 3778, Model: sentence-transformers/all-MiniLM-L6-v2
+[2026-10-07 09:25:26] [INFO] [procure_ai] ==================================================
+[2026-10-07 09:25:26] [INFO] [procure_ai]   PROCUREAI BACKEND READY AND OPERATIONAL         
+[2026-10-07 09:25:26] [INFO] [procure_ai] ==================================================
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
